@@ -978,6 +978,7 @@ bool AppInitParameterInteraction()
     // <int> in std::min<int>(...) to work around FreeBSD compilation issue described in #2695
     nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS + MAX_ADDNODE_CONNECTIONS);
 #ifdef USE_POLL
+    InitWarning(strprintf(_("Using poll fd_max=%d"), nFD ));
     int fd_max = nFD;
 #else
     int fd_max = FD_SETSIZE;
@@ -1154,8 +1155,10 @@ bool AppInitParameterInteraction()
     // Option to startup with mocktime set (used for regression testing):
     SetMockTime(gArgs.GetArg("-mocktime", 0)); // SetMockTime(0) is a no-op
 
+    /* remove bloom filters
     if (gArgs.GetBoolArg("-peerbloomfilters", DEFAULT_PEERBLOOMFILTERS))
         nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);
+    */
 
     if (gArgs.GetArg("-rpcserialversion", DEFAULT_RPC_SERIALIZE_VERSION) < 0)
         return InitError("rpcserialversion must be non-negative.");
@@ -1316,7 +1319,7 @@ bool AppInitMain(InitInterfaces& interfaces)
         if (!AppInitServers())
             return InitError(_("Unable to start HTTP server. See debug log for details."));
     }
-    
+
 #if defined(USE_SSE2)
     std::string sse2detect = scrypt_detect_sse2();
     LogPrintf("%s\n", sse2detect);

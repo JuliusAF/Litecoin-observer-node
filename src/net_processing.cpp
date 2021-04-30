@@ -2027,7 +2027,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 return true;
 
             bool fAlreadyHave = AlreadyHave(inv);
-            LogPrint(BCLog::NET, "got inv: %s  %s peer=%d\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom->GetId());
+            LogPrint(BCLog::NET, "CUSTOM: got inventory bhash=%s  %s peer=%d with ipaddr=%s\n", inv.ToString(), fAlreadyHave ? "have" : "new", pfrom.GetId(), pfrom.addr.ToStringIPPort());
 
             if (inv.type == MSG_TX) {
                 inv.type |= nFetchFlags;
@@ -2417,6 +2417,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         CBlockHeaderAndShortTxIDs cmpctblock;
         vRecv >> cmpctblock;
 
+        LogPrint(BCLog::NET, "CUSTOM: got compact block message from peer=%d with ipaddr=%s with bhash=%s and prevhash=%s and timestamp=%u\n",
+            pfrom.GetId(), pfrom.addr.ToStringIPPort(), cmpctblock.header.GetHash().ToString(),
+            cmpctblock.header.hashPrevBlock.ToString(), cmpctblock.header.nTime);
+
         bool received_new_header = false;
 
         {
@@ -2722,6 +2726,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         headers.resize(nCount);
         for (unsigned int n = 0; n < nCount; n++) {
             vRecv >> headers[n];
+            LogPrint(BCLog::NET, "CUSTOM: got header from peer=%d with ipaddr=%s with bhash=%s and prevhash=%s and timestamp=%u\n", pfrom.GetId(),
+                pfrom.addr.ToStringIPPort(),headers[n].GetHash().ToString(), headers[n].hashPrevBlock.ToString(), headers[n].nTime);
             ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
         }
 
@@ -3454,10 +3460,12 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         LOCK(cs_most_recent_block);
                         if (most_recent_block_hash == pBestIndex->GetBlockHash()) {
                             if (state.fWantsCmpctWitness || !fWitnessesPresentInMostRecentCompactBlock)
-                                connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, *most_recent_compact_block));
+                                LogPrint(BCLog::NET, "Not sending cmptcblock");
+                                //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, *most_recent_compact_block));
                             else {
                                 CBlockHeaderAndShortTxIDs cmpctblock(*most_recent_block, state.fWantsCmpctWitness);
-                                connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
+                                LogPrint(BCLog::NET, "Not sending cmptcblock");
+                                //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
                             }
                             fGotBlockFromCache = true;
                         }
@@ -3467,7 +3475,8 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         bool ret = ReadBlockFromDisk(block, pBestIndex, consensusParams);
                         assert(ret);
                         CBlockHeaderAndShortTxIDs cmpctblock(block, state.fWantsCmpctWitness);
-                        connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
+                        LogPrint(BCLog::NET, "Not sending cmptcblock");
+                        //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
                     }
                     state.pindexBestHeaderSent = pBestIndex;
                 } else if (state.fPreferHeaders) {
@@ -3480,7 +3489,8 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         LogPrint(BCLog::NET, "%s: sending header %s to peer=%d\n", __func__,
                                 vHeaders.front().GetHash().ToString(), pto->GetId());
                     }
-                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
+                    LogPrint(BCLog::NET, "Not sending header");
+                    //connman->PushMessage(pto, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
                     state.pindexBestHeaderSent = pBestIndex;
                 } else
                     fRevertToInv = true;
@@ -3525,7 +3535,8 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
             for (const uint256& hash : pto->vInventoryBlockToSend) {
                 vInv.push_back(CInv(MSG_BLOCK, hash));
                 if (vInv.size() == MAX_INV_SZ) {
-                    connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                    LogPrint(BCLog::NET, "Not sending inventory");
+                    //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                     vInv.clear();
                 }
             }
@@ -3641,15 +3652,18 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         }
                     }
                     if (vInv.size() == MAX_INV_SZ) {
-                        connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+                        LogPrint(BCLog::NET, "Not sending inventory");
+                        //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                         vInv.clear();
                     }
                     pto->filterInventoryKnown.insert(hash);
                 }
             }
         }
-        if (!vInv.empty())
-            connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+        if (!vInv.empty()) {
+            LogPrint(BCLog::NET, "Not sending inventory");
+            //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
+        }
 
         // Detect whether we're stalling
         nNow = GetTimeMicros();

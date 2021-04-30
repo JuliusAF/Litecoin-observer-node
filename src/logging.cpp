@@ -192,6 +192,7 @@ std::string BCLog::Logger::LogTimestampStr(const std::string &str)
         if (mocktime) {
             strStamped += " (mocktime: " + FormatISO8601DateTime(mocktime) + ")";
         }
+        strStamped += strprintf(" micros:%ld", nTimeMicros);
         strStamped += ' ' + str;
     } else
         strStamped = str;

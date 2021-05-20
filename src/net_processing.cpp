@@ -3464,7 +3464,6 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                                 //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, *most_recent_compact_block));
                             else {
                                 CBlockHeaderAndShortTxIDs cmpctblock(*most_recent_block, state.fWantsCmpctWitness);
-                                LogPrint(BCLog::NET, "Not sending cmptcblock\n");
                                 //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
                             }
                             fGotBlockFromCache = true;
@@ -3475,7 +3474,6 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         bool ret = ReadBlockFromDisk(block, pBestIndex, consensusParams);
                         assert(ret);
                         CBlockHeaderAndShortTxIDs cmpctblock(block, state.fWantsCmpctWitness);
-                        LogPrint(BCLog::NET, "Not sending cmptcblock\n");
                         //connman->PushMessage(pto, msgMaker.Make(nSendFlags, NetMsgType::CMPCTBLOCK, cmpctblock));
                     }
                     state.pindexBestHeaderSent = pBestIndex;
@@ -3489,7 +3487,6 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         LogPrint(BCLog::NET, "%s: sending header %s to peer=%d\n", __func__,
                                 vHeaders.front().GetHash().ToString(), pto->GetId());
                     }
-                    LogPrint(BCLog::NET, "Not sending header\n");
                     //connman->PushMessage(pto, msgMaker.Make(NetMsgType::HEADERS, vHeaders));
                     state.pindexBestHeaderSent = pBestIndex;
                 } else
@@ -3535,7 +3532,6 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
             for (const uint256& hash : pto->vInventoryBlockToSend) {
                 vInv.push_back(CInv(MSG_BLOCK, hash));
                 if (vInv.size() == MAX_INV_SZ) {
-                    LogPrint(BCLog::NET, "Not sending inventory");
                     //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                     vInv.clear();
                 }
@@ -3653,17 +3649,12 @@ bool PeerLogicValidation::SendMessages(CNode* pto)
                         }
                     }
                     if (vInv.size() == MAX_INV_SZ) {
-                        LogPrint(BCLog::NET, "Not sending inventory\n");
                         //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
                         vInv.clear();
                     }
                     pto->filterInventoryKnown.insert(hash);
                 }
             }
-        }
-        if (!vInv.empty()) {
-            LogPrint(BCLog::NET, "Not sending inventory\n");
-            //connman->PushMessage(pto, msgMaker.Make(NetMsgType::INV, vInv));
         }
 
         // Detect whether we're stalling
